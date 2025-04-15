@@ -69,6 +69,12 @@
     button:active {
       transform: scale(0.95);
     }
+    .reorder-button {
+      background-color: #ff4500;
+    }
+    .reorder-button:hover {
+      background-color: #cc3700;
+    }
     input, select {
       margin: 5px;
       padding: 8px;
@@ -316,6 +322,38 @@
       'Ultracurve 10.0mil Powersport Overlaminate': 220.00
     };
 
+    // Material to SKU mapping for Grimco
+    const materialSkus = {
+      '3M™ Print Wrap Film IJ280': 'IJ280-54',
+      '3M™ Wrap Film 1080': '1080-54',
+      '3M™ Controltac™ Graphic Film IJ180mC': 'IJ180MC-54',
+      '3M™ Envision™ Print Wrap Film SV480mC': 'SV480MC-54',
+      '3M™ Envision™ Print Wrap Film LX480mC': 'LX480MC-54',
+      '3M™ Scotchlite™ Print Wrap Film 780mC-10R': '780MC-54',
+      '3M™ Controltac™ Print Film 40C': '40C-54',
+      '3M™ Gloss Wrap Overlaminate 8428G': '8428G-54',
+      '3M™ Envision™ Gloss Overlaminate 8548G': '8548G-54',
+      '3M™ Matte Overlaminate 8550M': '8550M-54',
+      '3M™ Overlaminate 8900': '8900-54',
+      '3M™ Envision™ Luster Overlaminate 8048G': '8048G-54',
+      '3M™ Décor Overlaminate 8600 Series': '8600-54',
+      'Avery Dennison® MPI 1105 Easy Apply™ RS': 'AMPI1105RS-54',
+      'Avery Dennison® SW900 Supreme Wrapping Film': 'ASW9RS180-60',
+      'Avery Dennison® Conform Chrome': 'CONFORMCH-60',
+      'Avery Dennison® MPI 1405 Easy Apply™ RS': 'MPI1405-54',
+      'Avery Dennison® MPI 2904 Easy Apply™': 'MPI2904-54',
+      'Avery Dennison® MPI 1105 Supercast': 'MPI1105SC-54',
+      'Avery Dennison® MPI 2105 Easy Apply™': 'MPI2105-54',
+      'Avery Dennison® MPI 1005 Easy Apply™ RS': 'MPI1005-54',
+      'Avery Dennison® DOL 1360Z Gloss': 'DOL1360Z-54',
+      'Avery Dennison® DOL 1380Z Matte': 'DOL1380Z-54',
+      'Avery Dennison® DOL 1370Z Luster': 'DOL1370Z-54',
+      'Avery Dennison® DOL Max Gloss': 'DOLMAX-54',
+      'Avery Dennison® DOL 4000 Ultra-Clear': 'DOL4000-54',
+      'Avery Dennison® DOL 6040 Sparkle': 'DOL6040-54',
+      'Avery Dennison® SL 6560 PVC-Free': 'SL6560-54'
+    };
+
     // Categorize materials
     const categories = {
       '3M™ Print Wrap Film IJ280': 'Wrap',
@@ -390,6 +428,7 @@
         const row = document.createElement('tr');
         if (item.quantity < 5) row.classList.add('low-stock');
         if (item.remainingLength < 10) row.classList.add('low-length');
+        const reorderButton = item.remainingLength < 10 || item.quantity < 5 ? `<button class="reorder-button" onclick="reorderMaterial(${index})">Reorder</button>` : '';
         row.innerHTML = `
           <td>${item.type}</td>
           <td>${item.color}</td>
@@ -404,7 +443,10 @@
           </td>
           <td>$${item.price.toFixed(2)}</td>
           <td>${item.supplier || '-'}</td>
-          <td><button onclick="deleteMaterial(${index})">Delete</button></td>
+          <td>
+            <button onclick="deleteMaterial(${index})">Delete</button>
+            ${reorderButton}
+          </td>
         `;
         tbody.appendChild(row);
       });
@@ -488,6 +530,33 @@
         inventory.splice(index, 1);
         localStorage.setItem('inventory', JSON.stringify(inventory));
         applyFilters();
+      }
+    }
+
+    // Reorder material
+    function reorderMaterial(index) {
+      const item = inventory[index];
+      const brand = item.type.includes('3M') ? '3M' : item.type.includes('Avery Dennison') ? 'Avery Dennison' : item.type.includes('Ultracurve') || item.type.includes('ICON') ? 'Substance Inc.' : 'Custom';
+      
+      if (brand === 'Substance Inc.') {
+        window.open('https://www.substanceincorporated.com/', '_blank');
+        return;
+      }
+      
+      if (brand === 'Custom') {
+        alert(`Please contact your supplier for ${item.type}.`);
+        return;
+      }
+
+      const sku = materialSkus[item.type];
+      if (sku) {
+        const sizeQuery = item.size === '54in x 150ft' ? '54' : item.size === '60in x 150ft' ? '60' : '';
+        const searchQuery = encodeURIComponent(`${item.type} ${sizeQuery}`.trim());
+        const grimcoUrl = `https://www.grimco.com/Catalog/Products?search=${searchQuery}`;
+        window.open(grimcoUrl, '_blank');
+      } else {
+        alert(`Exact roll not found on Grimco. Please search manually for ${item.type}.`);
+        window.open('https://www.grimco.com/', '_blank');
       }
     }
 
